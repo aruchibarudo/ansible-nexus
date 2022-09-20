@@ -1,0 +1,46 @@
+---
+- name: Cleanup
+  hosts: all
+  vars_files:
+  - nexus_default_vars.yml
+  become: yes
+  gather_facts: false
+  no_log: "{{ molecule_no_log }}"
+  tasks:
+    # Developer must implement.
+
+    # Mandatory configuration for Molecule to function.
+
+  - name: Check unit file
+    ansible.builtin.stat:
+      path: "{{ systemd_service_dir }}/{{ nexus_service }}"
+    register: nexus_unit_file
+
+  - name: Stop nexus and remove unit file
+    block:
+  
+    - name: Stop nexus
+      ansible.builtin.systemd:
+        name: "{{ nexus_service }}"
+        state: stopped
+        enabled: no
+
+    - name: Remove unit file
+      ansible.builtin.file:
+        path: "{{ systemd_service_dir }}/{{ nexus_service }}"
+        state: absent
+      register: nexus_remove_unit_file
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
+      when:
+      - nexus_remove_unit_file.changed
+
+    when:
+    - nexus_unit_file.stat.exists
+
+    - name: Remove nexus
+      ansible.builtin.file:
+        path: "{{ nexus_install_dir }}/nexus"
+        state: absent

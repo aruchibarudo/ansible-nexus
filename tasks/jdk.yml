@@ -1,0 +1,4 @@
+- name: Install openjdk
+  package:
+    name: "{{ jdk[ansible_os_family] }}"
+    state: present

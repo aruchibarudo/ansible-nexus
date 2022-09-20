@@ -1,0 +1,137 @@
+---
+# tasks file for nexus
+#- import_tasks: selinux.yml
+
+- import_tasks: jdk.yml
+
+- name: Create nexus User
+  ansible.builtin.user:
+    name: "{{ nexus_user }}"
+    system: yes
+
+- name: Create install directory
+  ansible.builtin.file:
+    path: "{{ nexus_install_dir }}/nexus"
+    state: directory
+
+- name: No version given => Version detection
+  block:
+
+  - name: Call latest nexus uri to get redirection
+    uri:
+      url: "{{ nexus_download_url }}/latest-unix.tar.gz"
+      method: CONNECT
+      status_code: 302
+    register: nexus_latest_uri_call
+    # No changes made, we only need the target uri. Safe for check mode and needed for next operations
+    check_mode: no
+
+  - name: Register nexus_version from latest nexus uri redirection
+    set_fact:
+      nexus_version: >-
+        {{
+          nexus_latest_uri_call.location
+          | regex_replace("^https://.*nexus-(\d*\.\d*\.\d*-\d*)-unix.tar.gz", "\1")
+        }}
+      nexus_version_detected_from: latest
+
+  when:
+  - nexus_version is not defined or nexus_version | length == 0
+
+
+- name: Unpack nexus
+  ansible.builtin.unarchive:
+    src: "{{ nexus_download_url }}/{{ nexus_archive }}"
+    dest: "{{ nexus_install_dir }}/nexus"
+    remote_src: yes  
+  notify:
+  - Start nexus
+
+- name: Chown files
+  file:
+    path: "{{ nexus_workdir }}"
+    state: directory
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    recurse: yes
+
+- name: "Make version {{ nexus_version }} active"
+  file:
+    src: "{{ nexus_install_dir }}/nexus/nexus-{{ nexus_version }}"
+    path: "{{ nexus_install_dir }}/nexus/nexus"
+    state: link
+
+- name: Create systemd service
+  ansible.builtin.template:
+    src: "{{ nexus_service }}.j2"
+    dest: "{{ systemd_service_dir }}/{{ nexus_service }}"
+  notify:
+  - systemd-reload
+
+- name: Start nexus
+  ansible.builtin.systemd:
+    name: "{{ nexus_service }}"
+    daemon_reload: yes
+    enabled: "{{ nexus_autostart }}"
+    state: "{{ nexus_started | ternary('started', 'stopped') }}"
+  notify: 
+  - wait-for-nexus
+  - wait-for-nexus-port
+
+- meta: flush_handlers
+
+- name: Check admin.password
+  stat:
+    path: "{{ nexus_workdir }}/admin.password"
+  register: admin_password_file
+
+- name: Set admin password
+  when:
+    admin_password_file.stat.exists
+
+  block:
+  - name: Get default password
+    slurp:
+      src: "{{ nexus_workdir }}/admin.password"
+    register: _nexus_default_admin_password
+
+  - name: Decode default password
+    ansible.builtin.set_fact:
+      nexus_default_admin_password: "{{ _nexus_default_admin_password.content | b64decode }}"
+
+  - name: Set configured admin password
+    uri:
+      url: "{{ nexus_api_url }}/security/users/admin/change-password"
+      method: PUT
+      headers:
+        Content-Type: text/plain
+      user: "admin"
+      password: "{{ nexus_default_admin_password }}"
+      force_basic_auth: yes
+      status_code: 204
+      body: "{{ nexus_admin_password }}"
+      remote_src: yes
+    no_log: true
+
+  - name: Remove admin password file
+    file:
+      path: "{{ nexus_workdir }}/admin.password"
+      state: absent
+
+- name: Set anonymous access
+  uri:
+    url: "{{ nexus_api_url }}/security/anonymous"
+    method: PUT
+    headers:
+      Content-Type: application/json
+    user: "admin"
+    password: "{{ nexus_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    body:
+      enabled: true
+      userId: "anonymous"
+      realmName: "NexusAuthorizingRealm"
+  no_log: true
+  when:
+  - nexus_anonymous_access

@@ -1,0 +1,10 @@
+- name: Check selinux
+  community.general.ini_file:
+    create: no
+    no_extra_spaces: yes
+    path: /etc/selinux/config
+    section: null
+    option: SELINUX
+    value: "{{ selinux_config }}"
+    check_mode: yes
+  register: selinux_status

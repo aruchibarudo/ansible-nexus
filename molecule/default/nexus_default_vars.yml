@@ -1,0 +1,22 @@
+---
+# defaults file for nexus
+nexus_download_url: https://download.sonatype.com/nexus/3
+nexus_archive: "nexus-{{ nexus_version }}-unix.tar.gz"
+nexus_install_dir: /app
+nexus_user: nexus
+nexus_group: nexus
+systemd_service_dir: /etc/systemd/system
+nexus_service: nexus.service
+nexus_autostart: yes
+nexus_started: yes
+nexus_workdir: "{{ nexus_install_dir }}/nexus/sonatype-work/nexus3"
+nexus_data_dir: "{{ nexus_install_dir}}/nexus/blobs"
+selinux_config: enforced
+nexus_admin_password: P@ssw0rd
+nexus_anonymous_access: yes
+nexus_default_port: 8081
+nexus_api_url: "http://localhost:{{ nexus_default_port }}/service/rest/v1"
+
+jdk:
+  RedHat:
+  - java-1.8.0-openjdk

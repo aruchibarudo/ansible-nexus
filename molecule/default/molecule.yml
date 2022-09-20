@@ -1,0 +1,32 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: libvirt
+platforms:
+  - name: fedora
+    vcpu: 2
+    cpu_model: "qemu64"
+    image_url: "https://download.fedoraproject.org/pub/fedora/linux/releases/34/Cloud/x86_64/images/Fedora-Cloud-Base-34-1.2.x86_64.qcow2"
+    disk_size: "15G"
+    ssh_port: 22
+    memory_size: "4" # in G
+    qemu_user: libvirt-qemu
+provisioner:
+  name: ansible
+verifier:
+  name: ansible
+scenario:
+  test_sequence:
+    - dependency
+    - lint
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

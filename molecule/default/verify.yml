@@ -1,0 +1,26 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars_files:
+  - nexus_default_vars.yml
+  tasks:
+  - name: Check nexus started
+    ansible.builtin.systemd:
+      name: nexus.service
+      state: started
+    check_mode: yes
+    register: nexus_service_status
+
+  - name: Check nexus status
+    uri:
+      url: "{{ nexus_api_url }}/status"
+    register: nexus_server_check
+
+  - name: Example assertion
+    ansible.builtin.assert:
+      that:
+      - not nexus_service_status.changed
+      - nexus_server_check.status == 200

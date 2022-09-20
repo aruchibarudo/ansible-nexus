@@ -1,0 +1,19 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: libvirt
+platforms:
+  - name: instance
+    vcpu: 2
+    image_volume: /dev/sda1
+    cpu_model: "qemu64"
+    image_url: "https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-20210830.0.x86_64.qcow2"
+    disk_size: "15G"
+    ssh_port: 22
+    memory_size: "4" # in G
+    qemu_user: libvirt-qemu
+provisioner:
+  name: ansible
+verifier:
+  name: ansible
