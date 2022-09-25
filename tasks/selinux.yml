@@ -1,10 +1,9 @@
-- name: Check selinux
-  community.general.ini_file:
-    create: no
-    no_extra_spaces: yes
-    path: /etc/selinux/config
-    section: null
-    option: SELINUX
-    value: "{{ selinux_config }}"
-    check_mode: yes
-  register: selinux_status
+- name: "Put SELinux in {{ selinux_mode }} mode"
+  ansible.posix.selinux:
+    policy: targeted
+    state: "{{ selinux_mode }}"
+  register: selinux_rc
+
+- name: "Reboot"
+  ansible.builtin.reboot:
+  when: selinux_rc.reboot_required

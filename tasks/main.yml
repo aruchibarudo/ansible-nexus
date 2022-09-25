@@ -1,6 +1,6 @@
 ---
 # tasks file for nexus
-#- import_tasks: selinux.yml
+- import_tasks: selinux.yml
 
 - import_tasks: jdk.yml
 
@@ -22,8 +22,12 @@
       url: "{{ nexus_download_url }}/latest-unix.tar.gz"
       method: CONNECT
       status_code: 302
+      use_proxy: "{{ use_proxy | default(omit) }}"
+    environment:
+      http_proxy: "{{ proxy | default(omit) }}"
+      https_proxy: "{{ proxy | default(omit) }}"
+      no_proxy: "{{ no_proxy | default(omit) }}"
     register: nexus_latest_uri_call
-    # No changes made, we only need the target uri. Safe for check mode and needed for next operations
     check_mode: no
 
   - name: Register nexus_version from latest nexus uri redirection
@@ -38,10 +42,21 @@
   when:
   - nexus_version is not defined or nexus_version | length == 0
 
+- name: Download nexus
+  ansible.builtin.get_url:
+    url: "{{ nexus_download_url }}/{{ nexus_archive }}"
+    dest: "{{ nexus_install_dir }}"
+    use_proxy: "{{ use_proxy | default(omit) }}"
+  environment:
+    http_proxy: "{{ proxy | default(omit) }}"
+    https_proxy: "{{ proxy | default(omit) }}"
+    no_proxy: "{{ no_proxy | default(omit) }}"
+  notify:
+  - Start nexus
 
 - name: Unpack nexus
   ansible.builtin.unarchive:
-    src: "{{ nexus_download_url }}/{{ nexus_archive }}"
+    src: "{{ nexus_install_dir }}/{{ nexus_archive }}"
     dest: "{{ nexus_install_dir }}/nexus"
     remote_src: yes  
   notify:

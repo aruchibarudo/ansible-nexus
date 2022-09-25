@@ -11,12 +11,19 @@ nexus_autostart: yes
 nexus_started: yes
 nexus_workdir: "{{ nexus_install_dir }}/nexus/sonatype-work/nexus3"
 nexus_data_dir: "{{ nexus_install_dir}}/nexus/blobs"
-selinux_config: enforced
+selinux_mode: permissive
+selinux_config: yes
 nexus_admin_password: P@ssw0rd
 nexus_anonymous_access: yes
 nexus_default_port: 8081
 nexus_api_url: "http://localhost:{{ nexus_default_port }}/service/rest/v1"
 
+# use_proxy: no
+# proxy:
+# nexus_version:
+
 jdk:
   RedHat:
+  - java-1.8.0-openjdk
+  RED:
   - java-1.8.0-openjdk
